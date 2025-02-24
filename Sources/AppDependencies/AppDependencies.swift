@@ -51,7 +51,7 @@ public final class AppDependencies: Sendable {
         }
 
         public func callAsFunction() -> T {
-            appEnvironment.resolve(T.self, for: key, using: factory)
+            appEnvironment.resolve(T.self, for: key, with: factory)
         }
 
         public func use(_ factory: @escaping @Sendable (AppDependencies) -> T) {
@@ -127,7 +127,7 @@ public final class AppDependencies: Sendable {
     internal func resolve<T>(
         _: T.Type = T.self,
         for key: FactoryKey,
-        using factory: @escaping @Sendable (AppDependencies) -> T
+        with factory: @escaping @Sendable (AppDependencies) -> T
     ) -> T {
         lock.withLock {
             if let cached = cache[key] as? T {
