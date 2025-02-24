@@ -138,11 +138,11 @@ struct AppEnvironmentTests {
         #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
 
         model = AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantTwo()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantTwo()
             }
 
@@ -214,11 +214,11 @@ struct AppEnvironmentTests {
             #expect(model.dependencyOne is DependencyOneVariantOne)
             #expect(model.dependencyTwo is DependencyTwoVariantOne)
 
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantTwo()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantTwo()
             }
 
@@ -241,11 +241,11 @@ struct AppEnvironmentTests {
         }
 
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -260,11 +260,11 @@ struct AppEnvironmentTests {
                 #expect(model.dependencyOne is DependencyOneVariantOne)
                 #expect(model.dependencyTwo is DependencyTwoVariantOne)
 
-                AppDependencies.shared.dependencyOne.use { _ in
+                $0.dependencyOne.use { _ in
                     DependencyOneVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyTwo.use { _ in
+                $0.dependencyTwo.use { _ in
                     DependencyTwoVariantTwo()
                 }
 
@@ -287,11 +287,11 @@ struct AppEnvironmentTests {
         }
 
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -307,11 +307,11 @@ struct AppEnvironmentTests {
         }
 
         await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -361,11 +361,11 @@ struct AppEnvironmentTests {
         }
 
         await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -414,11 +414,11 @@ struct AppEnvironmentTests {
         }
 
         await AppDependencies.scoped { @MainActor in
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -460,7 +460,7 @@ struct AppEnvironmentTests {
             @AppDependency(\.dependencyFive) var dependencyFive
         }
 
-        AppDependencies.scoped {
+        AppDependencies.scoped { _ in
             let model = Model()
 
             #expect(model.dependencyFour is DependencyFour)

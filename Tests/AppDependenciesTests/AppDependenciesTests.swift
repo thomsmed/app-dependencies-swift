@@ -157,11 +157,11 @@ struct AppEnvironmentValuesTests {
             #expect(AppDependencies.shared.dependencyOne() is DependencyOneVariantOne)
             #expect(AppDependencies.shared.dependencyTwo() is DependencyTwoVariantOne)
 
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantTwo()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantTwo()
             }
 
@@ -175,11 +175,11 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_nestedScopedRegisterAndResolve() async throws {
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -190,11 +190,11 @@ struct AppEnvironmentValuesTests {
                 #expect(AppDependencies.shared.dependencyOne() is DependencyOneVariantOne)
                 #expect(AppDependencies.shared.dependencyTwo() is DependencyTwoVariantOne)
 
-                AppDependencies.shared.dependencyOne.use { _ in
+                $0.dependencyOne.use { _ in
                     DependencyOneVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyTwo.use { _ in
+                $0.dependencyTwo.use { _ in
                     DependencyTwoVariantTwo()
                 }
 
@@ -209,11 +209,11 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_scopedResolveDependencies() async throws {
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -223,11 +223,11 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_childTaskInheritScope() async throws {
         await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -273,11 +273,11 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_unstructuredTaskInheritByCopyingScope() async throws {
         await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -322,11 +322,11 @@ struct AppEnvironmentValuesTests {
     @MainActor
     @Test func test_detachedTaskDoNotInheritScope() async throws {
         await AppDependencies.scoped { @MainActor in
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -363,7 +363,7 @@ struct AppEnvironmentValuesTests {
     }
 
     @Test(.disabled("Detection of circular dependencies results in crash")) func test_scopedResolveCircularDependencies() async throws {
-        AppDependencies.scoped {
+        AppDependencies.scoped { _ in
             #expect(AppDependencies.shared.dependencyFour() is DependencyFour)
             #expect(AppDependencies.shared.dependencyFive() is DependencyFive)
         }
