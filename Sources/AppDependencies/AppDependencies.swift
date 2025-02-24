@@ -4,11 +4,11 @@ public final class AppDependencies: Sendable {
     internal protocol Factory {}
 
     internal struct TypedFactory<T>: Factory {
-        let factory: @Sendable (AppDependencies) -> T
+        internal let factory: @Sendable (AppDependencies) -> T
     }
 
     internal struct FactoryKey: Hashable {
-        let key: StaticString
+        internal let key: StaticString
 
         internal init(from key: StaticString) {
             self.key = key
