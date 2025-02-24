@@ -164,20 +164,20 @@ public final class AppDependencies: Sendable {
     }
 
     public static func scoped<T>(_ operation: () throws -> T) rethrows -> T {
-        let copy = local?.makeCopyOfCacheAndFactories() ?? (cache: [:], factories: [:])
-        let appEnvironment = AppDependencies(
+        let copy = shared.makeCopyOfCacheAndFactories()
+        let appDependencies = AppDependencies(
             cache: copy.cache,
             factories: copy.factories
         )
-        return try $local.withValue(appEnvironment, operation: operation)
+        return try $local.withValue(appDependencies, operation: operation)
     }
 
     public static func scoped<T>(_ operation: @Sendable () async throws -> T) async rethrows -> T {
-        let copy = local?.makeCopyOfCacheAndFactories() ?? (cache: [:], factories: [:])
-        let appEnvironment = AppDependencies(
+        let copy = shared.makeCopyOfCacheAndFactories()
+        let appDependencies = AppDependencies(
             cache: copy.cache,
             factories: copy.factories
         )
-        return try await $local.withValue(appEnvironment, operation: operation)
+        return try await $local.withValue(appDependencies, operation: operation)
     }
 }
