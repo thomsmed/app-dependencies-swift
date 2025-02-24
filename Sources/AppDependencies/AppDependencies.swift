@@ -36,9 +36,16 @@ public final class AppDependencies: Sendable {
     }
 
     public struct Registration<T> {
+        public enum Lifetime {
+            case unique
+            case singleton
+        }
+
         private let appEnvironment: AppDependencies
         private let key: FactoryKey
         private let factory: @Sendable (AppDependencies) -> T
+
+        private var lifetime: Lifetime = .singleton
 
         public init(
             _ appEnvironment: AppDependencies,
@@ -51,7 +58,7 @@ public final class AppDependencies: Sendable {
         }
 
         public func callAsFunction() -> T {
-            appEnvironment.resolve(T.self, for: key, with: factory)
+            appEnvironment.resolve(T.self, for: key, with: factory, and: lifetime)
         }
 
         public func use(_ factory: @escaping @Sendable (AppDependencies) -> T) {
@@ -64,6 +71,18 @@ public final class AppDependencies: Sendable {
 
         public func reset() {
             appEnvironment.reset(for: key)
+        }
+
+        public var unique: Self {
+            var copy = self
+            copy.lifetime = .unique
+            return copy
+        }
+
+        public var singleton: Self {
+            var copy = self
+            copy.lifetime = .singleton
+            return copy
         }
     }
 
@@ -127,7 +146,8 @@ public final class AppDependencies: Sendable {
     internal func resolve<T>(
         _: T.Type = T.self,
         for key: FactoryKey,
-        with factory: @escaping @Sendable (AppDependencies) -> T
+        with factory: @escaping @Sendable (AppDependencies) -> T,
+        and lifetime: Registration<T>.Lifetime
     ) -> T {
         lock.withLock {
             if let cached = cache[key] as? T {
@@ -144,7 +164,13 @@ public final class AppDependencies: Sendable {
             let resolved = factory.factory(self)
             resolving.remove(key)
 
-            cache[key] = resolved
+            switch lifetime {
+            case .unique:
+                break
+
+            case .singleton:
+                cache[key] = resolved
+            }
 
             return resolved
         }
