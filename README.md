@@ -39,10 +39,10 @@ extension AppDependencies {
     }
 
     var dependencyThree: Registration<DependencyThreeProtocol> {
-        Registration(self) { appEnvironment in
+        Registration(self) {
             DependencyThree(
-                dependencyOne: appEnvironment.dependencyOne(),
-                dependencyTwo: appEnvironment.dependencyTwo()
+                dependencyOne: $0.dependencyOne(),
+                dependencyTwo: $0.dependencyTwo()
             )
         }
     }
@@ -69,11 +69,11 @@ struct Model {
 
 ```swift
 AppDependencies.scoped {
-    AppDependencies.shared.dependencyOne.use { _ in
+    $0.dependencyOne.use { _ in
         MockDependencyOne()
     }
 
-    AppDependencies.shared.dependencyTwo.use { _ in
+    $0.dependencyTwo.use { _ in
         MockDependencyTwo()
     }
 
@@ -96,11 +96,11 @@ struct Model {
 }
 
 AppDependencies.scoped {
-    AppDependencies.shared.dependencyOne.use { _ in
+    $0.dependencyOne.use { _ in
         MockDependencyOne()
     }
 
-    AppDependencies.shared.dependencyTwo.use { _ in
+    $0.dependencyTwo.use { _ in
         MockDependencyTwo()
     }
 
@@ -121,11 +121,11 @@ struct Model {
 }
 
 let model = AppDependencies.scoped {
-    AppDependencies.shared.dependencyOne.use { _ in
+    $0.dependencyOne.use { _ in
         MockDependencyOne()
     }
 
-    AppDependencies.shared.dependencyTwo.use { _ in
+    $0.dependencyTwo.use { _ in
         MockDependencyTwo()
     }
 
