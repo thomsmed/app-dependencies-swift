@@ -100,36 +100,51 @@ public final class AppDependencies: Sendable {
 
     private let lock = NSRecursiveLock()
 
-    nonisolated(unsafe) internal var cache: [FactoryKey: Any]
-    nonisolated(unsafe) internal var factories: [FactoryKey: any Factory]
-    nonisolated(unsafe) internal var resolving: Set<FactoryKey> = []
+    nonisolated(unsafe) private var cache: [FactoryKey: Any]
+    nonisolated(unsafe) private var factories: [FactoryKey: any Factory]
+    nonisolated(unsafe) private var dependenciesGraph: [FactoryKey: Set<FactoryKey>] = [:]
+    nonisolated(unsafe) private var resolving: [FactoryKey] = []
 
     internal init(
         cache: [FactoryKey: Any] = [:],
-        factories: [FactoryKey: any Factory] = [:]
+        factories: [FactoryKey: any Factory] = [:],
+        dependenciesGraph: [FactoryKey: Set<FactoryKey>] = [:]
     ) {
         self.cache = cache
         self.factories = factories
+        self.dependenciesGraph = dependenciesGraph
     }
 
-    internal func makeCopyOfCacheAndFactories() -> (cache: [FactoryKey: Any], factories: [FactoryKey: any Factory]) {
+    internal func makeCopyOfState() -> (cache: [FactoryKey: Any], factories: [FactoryKey: any Factory], dependenciesGraph: [FactoryKey: Set<FactoryKey>]) {
         lock.withLock {
             let cacheCopy = self.cache.merging([:], uniquingKeysWith: { current, _ in current })
             let factoriesCopy = self.factories.merging([:], uniquingKeysWith: { current, _ in current })
-            return (cache: cacheCopy, factories: factoriesCopy)
+            let dependenciesGraphCopy = self.dependenciesGraph.merging([:], uniquingKeysWith: { current, _ in current })
+            return (cache: cacheCopy, factories: factoriesCopy, dependenciesGraph: dependenciesGraphCopy)
+        }
+    }
+
+    internal func invalidateDependencies(on key: FactoryKey) {
+        lock.withLock {
+            dependenciesGraph[key]?.forEach { dependentKey in
+                cache[dependentKey] = nil
+                invalidateDependencies(on: dependentKey)
+            }
         }
     }
 
     internal func clear(for key: FactoryKey) {
         lock.withLock {
             cache[key] = nil
+            invalidateDependencies(on: key)
         }
     }
 
     internal func reset(for key: FactoryKey) {
         lock.withLock {
-            factories[key] = nil
             cache[key] = nil
+            factories[key] = nil
+            invalidateDependencies(on: key)
         }
     }
 
@@ -138,8 +153,9 @@ public final class AppDependencies: Sendable {
         for key: FactoryKey
     ) {
         lock.withLock {
-            factories[key] = TypedFactory(factory: factory)
             cache[key] = nil
+            factories[key] = TypedFactory(factory: factory)
+            invalidateDependencies(on: key)
         }
     }
 
@@ -150,26 +166,33 @@ public final class AppDependencies: Sendable {
         and lifetime: Registration<T>.Lifetime
     ) -> T {
         lock.withLock {
-            if let cached = cache[key] as? T {
-                return cached
-            }
-
-            let factory = factories[key] as? TypedFactory<T> ?? TypedFactory(factory: factory)
-
-            if resolving.contains(key) {
+            if self.resolving.contains(key) {
                 fatalError("Circular dependency detected for \(key)")
             }
 
-            resolving.insert(key)
+            if let currentlyResolving = self.resolving.last {
+                var dependencies = self.dependenciesGraph[key] ?? []
+                dependencies.insert(currentlyResolving)
+                self.dependenciesGraph[key] = dependencies
+            }
+
+            self.resolving.append(key)
+            defer { self.resolving.removeLast() }
+
+            if let cached = self.cache[key] as? T {
+                return cached
+            }
+
+            let factory = self.factories[key] as? TypedFactory<T> ?? TypedFactory(factory: factory)
+
             let resolved = factory.factory(self)
-            resolving.remove(key)
 
             switch lifetime {
             case .unique:
                 break
 
             case .singleton:
-                cache[key] = resolved
+                self.cache[key] = resolved
             }
 
             return resolved
@@ -179,6 +202,7 @@ public final class AppDependencies: Sendable {
     public func clear() {
         lock.withLock {
             cache.removeAll(keepingCapacity: true)
+            dependenciesGraph.removeAll(keepingCapacity: true)
         }
     }
 
@@ -186,14 +210,16 @@ public final class AppDependencies: Sendable {
         lock.withLock {
             cache.removeAll(keepingCapacity: true)
             factories.removeAll(keepingCapacity: true)
+            dependenciesGraph.removeAll(keepingCapacity: true)
         }
     }
 
     public static func scoped<T>(_ operation: (AppDependencies) throws -> T) rethrows -> T {
-        let copy = shared.makeCopyOfCacheAndFactories()
+        let copy = shared.makeCopyOfState()
         let appDependencies = AppDependencies(
             cache: copy.cache,
-            factories: copy.factories
+            factories: copy.factories,
+            dependenciesGraph: copy.dependenciesGraph
         )
         return try $local.withValue(appDependencies) {
             try operation(AppDependencies.shared)
@@ -201,10 +227,11 @@ public final class AppDependencies: Sendable {
     }
 
     public static func scoped<T>(_ operation: @Sendable (AppDependencies) async throws -> T) async rethrows -> T {
-        let copy = shared.makeCopyOfCacheAndFactories()
+        let copy = shared.makeCopyOfState()
         let appDependencies = AppDependencies(
             cache: copy.cache,
-            factories: copy.factories
+            factories: copy.factories,
+            dependenciesGraph: copy.dependenciesGraph
         )
         return try await $local.withValue(appDependencies) {
             try await operation(AppDependencies.shared)
