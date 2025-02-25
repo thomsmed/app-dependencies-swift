@@ -14,6 +14,11 @@ fileprivate protocol DependencyFourProtocol {
 fileprivate protocol DependencyFiveProtocol {
     var dependencyFour: DependencyFourProtocol { get }
 }
+fileprivate protocol DependencySixProtocol {
+    var dependencyOne: DependencyOneProtocol { get }
+    var dependencyTwo: DependencyTwoProtocol { get }
+    var dependencyThree: DependencyThreeProtocol { get }
+}
 
 fileprivate struct DependencyOneVariantOne: DependencyOneProtocol {}
 fileprivate struct DependencyOneVariantTwo: DependencyOneProtocol {}
@@ -34,6 +39,12 @@ fileprivate struct DependencyFive: DependencyFiveProtocol {
     let dependencyFour: DependencyFourProtocol
 }
 
+fileprivate struct DependencySix: DependencySixProtocol {
+    let dependencyOne: DependencyOneProtocol
+    let dependencyTwo: DependencyTwoProtocol
+    let dependencyThree: DependencyThreeProtocol
+}
+
 fileprivate extension AppDependencies {
     var dependencyOne: Registration<DependencyOneProtocol> {
         Registration(self) { _ in
@@ -48,26 +59,36 @@ fileprivate extension AppDependencies {
     }
 
     var dependencyThree: Registration<DependencyThreeProtocol> {
-        Registration(self) { appEnvironment in
+        Registration(self) { appDependencies in
             DependencyThree(
-                dependencyOne: appEnvironment.dependencyOne(),
-                dependencyTwo: appEnvironment.dependencyTwo()
+                dependencyOne: appDependencies.dependencyOne(),
+                dependencyTwo: appDependencies.dependencyTwo()
             )
         }
     }
 
     var dependencyFour: Registration<DependencyFourProtocol> {
-        Registration(self) { appEnvironment in
+        Registration(self) { appDependencies in
             DependencyFour(
-                dependencyFive: appEnvironment.dependencyFive()
+                dependencyFive: appDependencies.dependencyFive()
             )
         }
     }
 
     var dependencyFive: Registration<DependencyFiveProtocol> {
-        Registration(self) { appEnvironment in
+        Registration(self) { appDependencies in
             DependencyFive(
-                dependencyFour: appEnvironment.dependencyFour()
+                dependencyFour: appDependencies.dependencyFour()
+            )
+        }
+    }
+
+    var dependencySix: Registration<DependencySixProtocol> {
+        Registration(self) { appDependencies in
+            DependencySix(
+                dependencyOne: appDependencies.dependencyOne(),
+                dependencyTwo: appDependencies.dependencyTwo(),
+                dependencyThree: appDependencies.dependencyThree()
             )
         }
     }
@@ -118,6 +139,49 @@ struct AppEnvironmentTests {
     }
 
     @MainActor
+    @Test func test_mainActorBoundRegisterAndResolveSingleWithMultipleDependencies() async throws {
+        struct Model {
+            @AppDependency(\.dependencySix) var dependencySix
+        }
+
+        AppDependencies.shared.dependencyOne.use { _ in
+            DependencyOneVariantOne()
+        }
+
+        AppDependencies.shared.dependencyTwo.use { _ in
+            DependencyTwoVariantOne()
+        }
+
+        AppDependencies.shared.clear()
+
+        var model = Model()
+
+        #expect(model.dependencySix.dependencyOne is DependencyOneVariantOne)
+        #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantOne)
+        #expect(model.dependencySix.dependencyThree is DependencyThree)
+        #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantOne)
+        #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+        AppDependencies.shared.dependencyOne.use { _ in
+            DependencyOneVariantTwo()
+        }
+
+        AppDependencies.shared.dependencyTwo.use { _ in
+            DependencyTwoVariantTwo()
+        }
+
+        AppDependencies.shared.clear()
+
+        model = Model()
+
+        #expect(model.dependencySix.dependencyOne is DependencyOneVariantTwo)
+        #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantTwo)
+        #expect(model.dependencySix.dependencyThree is DependencyThree)
+        #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+        #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+    }
+
+    @MainActor
     @Test func test_mainActorBoundScoped() {
         struct Model {
             @AppDependency(\.dependencyThree) var dependencyThree
@@ -138,11 +202,11 @@ struct AppEnvironmentTests {
         #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
 
         model = AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantTwo()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantTwo()
             }
 
@@ -214,11 +278,11 @@ struct AppEnvironmentTests {
             #expect(model.dependencyOne is DependencyOneVariantOne)
             #expect(model.dependencyTwo is DependencyTwoVariantOne)
 
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantTwo()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantTwo()
             }
 
@@ -241,11 +305,11 @@ struct AppEnvironmentTests {
         }
 
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -260,11 +324,11 @@ struct AppEnvironmentTests {
                 #expect(model.dependencyOne is DependencyOneVariantOne)
                 #expect(model.dependencyTwo is DependencyTwoVariantOne)
 
-                AppDependencies.shared.dependencyOne.use { _ in
+                $0.dependencyOne.use { _ in
                     DependencyOneVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyTwo.use { _ in
+                $0.dependencyTwo.use { _ in
                     DependencyTwoVariantTwo()
                 }
 
@@ -287,11 +351,11 @@ struct AppEnvironmentTests {
         }
 
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -301,17 +365,61 @@ struct AppEnvironmentTests {
         }
     }
 
+    @Test func test_scopedRegisterAndResolveSingleWithMultipleDependencies() async throws {
+        struct Model {
+            @AppDependency(\.dependencySix) var dependencySix
+        }
+
+        AppDependencies.scoped {
+            $0.dependencyOne.use { _ in
+                DependencyOneVariantOne()
+            }
+
+            $0.dependencyTwo.use { _ in
+                DependencyTwoVariantOne()
+            }
+
+            $0.clear()
+
+            var model = Model()
+
+            #expect(model.dependencySix.dependencyOne is DependencyOneVariantOne)
+            #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantOne)
+            #expect(model.dependencySix.dependencyThree is DependencyThree)
+            #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantOne)
+            #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+            $0.dependencyOne.use { _ in
+                DependencyOneVariantTwo()
+            }
+
+            $0.dependencyTwo.use { _ in
+                DependencyTwoVariantTwo()
+            }
+
+            $0.clear()
+
+            model = Model()
+
+            #expect(model.dependencySix.dependencyOne is DependencyOneVariantTwo)
+            #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantTwo)
+            #expect(model.dependencySix.dependencyThree is DependencyThree)
+            #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+            #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+        }
+    }
+
     @Test func test_childTaskInheritScope() async throws {
         struct Model {
             @AppDependency(\.dependencyThree) var dependencyThree
         }
 
         await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -361,11 +469,11 @@ struct AppEnvironmentTests {
         }
 
         await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -414,11 +522,11 @@ struct AppEnvironmentTests {
         }
 
         await AppDependencies.scoped { @MainActor in
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -460,7 +568,7 @@ struct AppEnvironmentTests {
             @AppDependency(\.dependencyFive) var dependencyFive
         }
 
-        AppDependencies.scoped {
+        AppDependencies.scoped { _ in
             let model = Model()
 
             #expect(model.dependencyFour is DependencyFour)

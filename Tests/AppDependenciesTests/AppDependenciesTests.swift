@@ -14,6 +14,11 @@ fileprivate protocol DependencyFourProtocol {
 fileprivate protocol DependencyFiveProtocol {
     var dependencyFour: DependencyFourProtocol { get }
 }
+fileprivate protocol DependencySixProtocol {
+    var dependencyOne: DependencyOneProtocol { get }
+    var dependencyTwo: DependencyTwoProtocol { get }
+    var dependencyThree: DependencyThreeProtocol { get }
+}
 
 fileprivate struct DependencyOneVariantOne: DependencyOneProtocol {}
 fileprivate struct DependencyOneVariantTwo: DependencyOneProtocol {}
@@ -34,6 +39,12 @@ fileprivate struct DependencyFive: DependencyFiveProtocol {
     let dependencyFour: DependencyFourProtocol
 }
 
+fileprivate struct DependencySix: DependencySixProtocol {
+    let dependencyOne: DependencyOneProtocol
+    let dependencyTwo: DependencyTwoProtocol
+    let dependencyThree: DependencyThreeProtocol
+}
+
 fileprivate extension AppDependencies {
     var dependencyOne: Registration<DependencyOneProtocol> {
         Registration(self) { _ in
@@ -48,26 +59,36 @@ fileprivate extension AppDependencies {
     }
 
     var dependencyThree: Registration<DependencyThreeProtocol> {
-        Registration(self) { appEnvironment in
+        Registration(self) { appDependencies in
             DependencyThree(
-                dependencyOne: appEnvironment.dependencyOne(),
-                dependencyTwo: appEnvironment.dependencyTwo()
+                dependencyOne: appDependencies.dependencyOne(),
+                dependencyTwo: appDependencies.dependencyTwo()
             )
         }
     }
 
     var dependencyFour: Registration<DependencyFourProtocol> {
-        Registration(self) { appEnvironment in
+        Registration(self) { appDependencies in
             DependencyFour(
-                dependencyFive: appEnvironment.dependencyFive()
+                dependencyFive: appDependencies.dependencyFive()
             )
         }
     }
 
     var dependencyFive: Registration<DependencyFiveProtocol> {
-        Registration(self) { appEnvironment in
+        Registration(self) { appDependencies in
             DependencyFive(
-                dependencyFour: appEnvironment.dependencyFour()
+                dependencyFour: appDependencies.dependencyFour()
+            )
+        }
+    }
+
+    var dependencySix: Registration<DependencySixProtocol> {
+        Registration(self) { appDependencies in
+            DependencySix(
+                dependencyOne: appDependencies.dependencyOne(),
+                dependencyTwo: appDependencies.dependencyTwo(),
+                dependencyThree: appDependencies.dependencyThree()
             )
         }
     }
@@ -116,6 +137,45 @@ struct AppEnvironmentValuesTests {
     }
 
     @MainActor
+    @Test func test_mainActorBoundRegisterAndResolveSingleWithMultipleDependencies() async throws {
+        AppDependencies.shared.dependencyOne.use { _ in
+            DependencyOneVariantOne()
+        }
+
+        AppDependencies.shared.dependencyTwo.use { _ in
+            DependencyTwoVariantOne()
+        }
+
+        AppDependencies.shared.clear()
+
+        var dependencySix = AppDependencies.shared.dependencySix()
+
+        #expect(dependencySix.dependencyOne is DependencyOneVariantOne)
+        #expect(dependencySix.dependencyTwo is DependencyTwoVariantOne)
+        #expect(dependencySix.dependencyThree is DependencyThree)
+        #expect(dependencySix.dependencyThree.dependencyOne is DependencyOneVariantOne)
+        #expect(dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+        AppDependencies.shared.dependencyOne.use { _ in
+            DependencyOneVariantTwo()
+        }
+
+        AppDependencies.shared.dependencyTwo.use { _ in
+            DependencyTwoVariantTwo()
+        }
+
+        AppDependencies.shared.clear()
+
+        dependencySix = AppDependencies.shared.dependencySix()
+
+        #expect(dependencySix.dependencyOne is DependencyOneVariantTwo)
+        #expect(dependencySix.dependencyTwo is DependencyTwoVariantTwo)
+        #expect(dependencySix.dependencyThree is DependencyThree)
+        #expect(dependencySix.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+        #expect(dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+    }
+
+    @MainActor
     @Test func test_mainActorBoundRegisterAndResolve() async throws {
         AppDependencies.shared.dependencyOne.use { _ in
             DependencyOneVariantOne()
@@ -157,11 +217,11 @@ struct AppEnvironmentValuesTests {
             #expect(AppDependencies.shared.dependencyOne() is DependencyOneVariantOne)
             #expect(AppDependencies.shared.dependencyTwo() is DependencyTwoVariantOne)
 
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantTwo()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantTwo()
             }
 
@@ -175,11 +235,11 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_nestedScopedRegisterAndResolve() async throws {
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -190,11 +250,11 @@ struct AppEnvironmentValuesTests {
                 #expect(AppDependencies.shared.dependencyOne() is DependencyOneVariantOne)
                 #expect(AppDependencies.shared.dependencyTwo() is DependencyTwoVariantOne)
 
-                AppDependencies.shared.dependencyOne.use { _ in
+                $0.dependencyOne.use { _ in
                     DependencyOneVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyTwo.use { _ in
+                $0.dependencyTwo.use { _ in
                     DependencyTwoVariantTwo()
                 }
 
@@ -209,11 +269,11 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_scopedResolveDependencies() async throws {
         AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -221,13 +281,53 @@ struct AppEnvironmentValuesTests {
         }
     }
 
-    @Test func test_childTaskInheritScope() async throws {
-        await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+    @Test func test_scopedRegisterAndResolveSingleWithMultipleDependencies() async throws {
+        AppDependencies.scoped {
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
+                DependencyTwoVariantOne()
+            }
+
+            $0.clear()
+
+            var dependencySix = AppDependencies.shared.dependencySix()
+
+            #expect(dependencySix.dependencyOne is DependencyOneVariantOne)
+            #expect(dependencySix.dependencyTwo is DependencyTwoVariantOne)
+            #expect(dependencySix.dependencyThree is DependencyThree)
+            #expect(dependencySix.dependencyThree.dependencyOne is DependencyOneVariantOne)
+            #expect(dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+            $0.dependencyOne.use { _ in
+                DependencyOneVariantTwo()
+            }
+
+            $0.dependencyTwo.use { _ in
+                DependencyTwoVariantTwo()
+            }
+
+            $0.clear()
+
+            dependencySix = AppDependencies.shared.dependencySix()
+
+            #expect(dependencySix.dependencyOne is DependencyOneVariantTwo)
+            #expect(dependencySix.dependencyTwo is DependencyTwoVariantTwo)
+            #expect(dependencySix.dependencyThree is DependencyThree)
+            #expect(dependencySix.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+            #expect(dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+        }
+    }
+
+    @Test func test_childTaskInheritScope() async throws {
+        await AppDependencies.scoped {
+            $0.dependencyOne.use { _ in
+                DependencyOneVariantOne()
+            }
+
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -273,11 +373,11 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_unstructuredTaskInheritByCopyingScope() async throws {
         await AppDependencies.scoped {
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -322,11 +422,11 @@ struct AppEnvironmentValuesTests {
     @MainActor
     @Test func test_detachedTaskDoNotInheritScope() async throws {
         await AppDependencies.scoped { @MainActor in
-            AppDependencies.shared.dependencyOne.use { _ in
+            $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
 
-            AppDependencies.shared.dependencyTwo.use { _ in
+            $0.dependencyTwo.use { _ in
                 DependencyTwoVariantOne()
             }
 
@@ -363,7 +463,7 @@ struct AppEnvironmentValuesTests {
     }
 
     @Test(.disabled("Detection of circular dependencies results in crash")) func test_scopedResolveCircularDependencies() async throws {
-        AppDependencies.scoped {
+        AppDependencies.scoped { _ in
             #expect(AppDependencies.shared.dependencyFour() is DependencyFour)
             #expect(AppDependencies.shared.dependencyFive() is DependencyFive)
         }
