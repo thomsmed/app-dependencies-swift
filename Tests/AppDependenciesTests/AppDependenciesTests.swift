@@ -362,7 +362,7 @@ struct AppEnvironmentValuesTests {
     }
 
     @Test func test_unstructuredTaskInheritByCopyingScope() async throws {
-        await AppDependencies.scoped {
+        try await AppDependencies.scoped {
             $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
@@ -376,6 +376,8 @@ struct AppEnvironmentValuesTests {
 
                 #expect(dependencyThree.dependencyOne is DependencyOneVariantOne)
                 #expect(dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+                try await Task.sleep(for: .milliseconds(1))
 
                 AppDependencies.shared.dependencyOne.use { _ in
                     DependencyOneVariantTwo()
@@ -396,7 +398,7 @@ struct AppEnvironmentValuesTests {
             #expect(dependencyThree.dependencyOne is DependencyOneVariantOne)
             #expect(dependencyThree.dependencyTwo is DependencyTwoVariantOne)
 
-            await task.value
+            try await task.value
 
             dependencyThree = AppDependencies.shared.dependencyThree()
 
@@ -446,7 +448,7 @@ struct AppEnvironmentValuesTests {
 
     @Test func test_multipleDetachedTaskDoNotInheritScope() async throws {
         let tasks = [
-            Task {
+            Task.detached {
                 struct DependencyThreeVariantOne: DependencyThreeProtocol {
                     let dependencyOne: any DependencyOneProtocol
                     let dependencyTwo: any DependencyTwoProtocol
@@ -501,7 +503,7 @@ struct AppEnvironmentValuesTests {
                     #expect(dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
                 }
             },
-            Task {
+            Task.detached {
                 struct DependencyThreeVariantTwo: DependencyThreeProtocol {
                     let dependencyOne: any DependencyOneProtocol
                     let dependencyTwo: any DependencyTwoProtocol
@@ -556,7 +558,7 @@ struct AppEnvironmentValuesTests {
                     #expect(dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
                 }
             },
-            Task {
+            Task.detached {
                 struct DependencyThreeVariantThree: DependencyThreeProtocol {
                     let dependencyOne: DependencyOneProtocol
                     let dependencyTwo: DependencyTwoProtocol

@@ -452,7 +452,7 @@ struct AppEnvironmentTests {
             @AppDependency(\.dependencyThree) var dependencyThree
         }
 
-        await AppDependencies.scoped {
+        try await AppDependencies.scoped {
             $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
@@ -466,6 +466,8 @@ struct AppEnvironmentTests {
 
                 #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
                 #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+                try await Task.sleep(for: .milliseconds(1))
 
                 AppDependencies.shared.dependencyOne.use { _ in
                     DependencyOneVariantTwo()
@@ -486,7 +488,7 @@ struct AppEnvironmentTests {
             #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
             #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
 
-            await task.value
+            try await task.value
 
             model = Model()
 
@@ -545,7 +547,7 @@ struct AppEnvironmentTests {
         }
 
         let tasks = [
-            Task {
+            Task.detached {
                 struct DependencyThreeVariantOne: DependencyThreeProtocol {
                     let dependencyOne: any DependencyOneProtocol
                     let dependencyTwo: any DependencyTwoProtocol
@@ -598,7 +600,7 @@ struct AppEnvironmentTests {
                     #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
                 }
             },
-            Task {
+            Task.detached {
                 struct DependencyThreeVariantTwo: DependencyThreeProtocol {
                     let dependencyOne: any DependencyOneProtocol
                     let dependencyTwo: any DependencyTwoProtocol
@@ -651,7 +653,7 @@ struct AppEnvironmentTests {
                     #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
                 }
             },
-            Task {
+            Task.detached {
                 struct DependencyThreeVariantThree: DependencyThreeProtocol {
                     let dependencyOne: DependencyOneProtocol
                     let dependencyTwo: DependencyTwoProtocol
