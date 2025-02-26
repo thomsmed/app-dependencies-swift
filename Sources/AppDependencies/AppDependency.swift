@@ -86,3 +86,26 @@ import SwiftUI
         self.keyPath = keyPath
     }
 }
+
+@MainActor @propertyWrapper public struct ObservedAppDependency<T: ObservableObject>: DynamicProperty {
+    @ObservedObject private var observedWrappedValue: T
+
+    public var wrappedValue: T {
+        observedWrappedValue
+    }
+
+    public init(_ keyPath: KeyPath<AppDependencies, AppDependencies.Registration<T>>) {
+        observedWrappedValue = AppDependencies.shared[keyPath: keyPath]()
+    }
+}
+
+import Observation
+
+@available(iOS 17.0, *)
+@MainActor @propertyWrapper public struct ObservableAppDependency<T: Observable>: DynamicProperty {
+    public private(set) var wrappedValue: T
+
+    public init(_ keyPath: KeyPath<AppDependencies, AppDependencies.Registration<T>>) {
+        wrappedValue = AppDependencies.shared[keyPath: keyPath]()
+    }
+}

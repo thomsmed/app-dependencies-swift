@@ -198,15 +198,17 @@ public final class AppDependencies: Sendable {
             return resolved
         }
     }
+}
 
-    public func clear() {
+public extension AppDependencies {
+    func clear() {
         lock.withLock {
             cache.removeAll(keepingCapacity: true)
             dependenciesGraph.removeAll(keepingCapacity: true)
         }
     }
 
-    public func reset() {
+    func reset() {
         lock.withLock {
             cache.removeAll(keepingCapacity: true)
             factories.removeAll(keepingCapacity: true)
@@ -214,7 +216,7 @@ public final class AppDependencies: Sendable {
         }
     }
 
-    public static func scoped<T>(_ operation: (AppDependencies) throws -> T) rethrows -> T {
+    static func scoped<T>(_ operation: (AppDependencies) throws -> T) rethrows -> T {
         let copy = shared.makeCopyOfState()
         let appDependencies = AppDependencies(
             cache: copy.cache,
@@ -226,7 +228,7 @@ public final class AppDependencies: Sendable {
         }
     }
 
-    public static func scoped<T>(_ operation: @Sendable (AppDependencies) async throws -> T) async rethrows -> T {
+    static func scoped<T>(_ operation: @Sendable (AppDependencies) async throws -> T) async rethrows -> T {
         let copy = shared.makeCopyOfState()
         let appDependencies = AppDependencies(
             cache: copy.cache,
