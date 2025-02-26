@@ -5,19 +5,19 @@ import Testing
 fileprivate protocol DependencyOneProtocol {}
 fileprivate protocol DependencyTwoProtocol {}
 fileprivate protocol DependencyThreeProtocol {
-    var dependencyOne: DependencyOneProtocol { get }
-    var dependencyTwo: DependencyTwoProtocol { get }
+    var dependencyOne: any DependencyOneProtocol { get }
+    var dependencyTwo: any DependencyTwoProtocol { get }
 }
 fileprivate protocol DependencyFourProtocol {
-    var dependencyFive: DependencyFiveProtocol { get }
+    var dependencyFive: any DependencyFiveProtocol { get }
 }
 fileprivate protocol DependencyFiveProtocol {
-    var dependencyFour: DependencyFourProtocol { get }
+    var dependencyFour: any DependencyFourProtocol { get }
 }
 fileprivate protocol DependencySixProtocol {
-    var dependencyOne: DependencyOneProtocol { get }
-    var dependencyTwo: DependencyTwoProtocol { get }
-    var dependencyThree: DependencyThreeProtocol { get }
+    var dependencyOne: any DependencyOneProtocol { get }
+    var dependencyTwo: any DependencyTwoProtocol { get }
+    var dependencyThree: any DependencyThreeProtocol { get }
 }
 
 fileprivate struct DependencyOneVariantOne: DependencyOneProtocol {}
@@ -27,22 +27,22 @@ fileprivate struct DependencyTwoVariantOne: DependencyTwoProtocol {}
 fileprivate struct DependencyTwoVariantTwo: DependencyTwoProtocol {}
 
 fileprivate struct DependencyThree: DependencyThreeProtocol {
-    let dependencyOne: DependencyOneProtocol
-    let dependencyTwo: DependencyTwoProtocol
+    let dependencyOne: any DependencyOneProtocol
+    let dependencyTwo: any DependencyTwoProtocol
 }
 
 fileprivate struct DependencyFour: DependencyFourProtocol {
-    let dependencyFive: DependencyFiveProtocol
+    let dependencyFive: any DependencyFiveProtocol
 }
 
 fileprivate struct DependencyFive: DependencyFiveProtocol {
-    let dependencyFour: DependencyFourProtocol
+    let dependencyFour: any DependencyFourProtocol
 }
 
 fileprivate struct DependencySix: DependencySixProtocol {
-    let dependencyOne: DependencyOneProtocol
-    let dependencyTwo: DependencyTwoProtocol
-    let dependencyThree: DependencyThreeProtocol
+    let dependencyOne: any DependencyOneProtocol
+    let dependencyTwo: any DependencyTwoProtocol
+    let dependencyThree: any DependencyThreeProtocol
 }
 
 fileprivate extension AppDependencies {
@@ -59,36 +59,36 @@ fileprivate extension AppDependencies {
     }
 
     var dependencyThree: Registration<DependencyThreeProtocol> {
-        Registration(self) { appDependencies in
+        Registration(self) {
             DependencyThree(
-                dependencyOne: appDependencies.dependencyOne(),
-                dependencyTwo: appDependencies.dependencyTwo()
+                dependencyOne: $0.dependencyOne(),
+                dependencyTwo: $0.dependencyTwo()
             )
         }
     }
 
     var dependencyFour: Registration<DependencyFourProtocol> {
-        Registration(self) { appDependencies in
+        Registration(self) {
             DependencyFour(
-                dependencyFive: appDependencies.dependencyFive()
+                dependencyFive: $0.dependencyFive()
             )
         }
     }
 
     var dependencyFive: Registration<DependencyFiveProtocol> {
-        Registration(self) { appDependencies in
+        Registration(self) {
             DependencyFive(
-                dependencyFour: appDependencies.dependencyFour()
+                dependencyFour: $0.dependencyFour()
             )
         }
     }
 
     var dependencySix: Registration<DependencySixProtocol> {
-        Registration(self) { appDependencies in
+        Registration(self) {
             DependencySix(
-                dependencyOne: appDependencies.dependencyOne(),
-                dependencyTwo: appDependencies.dependencyTwo(),
-                dependencyThree: appDependencies.dependencyThree()
+                dependencyOne: $0.dependencyOne(),
+                dependencyTwo: $0.dependencyTwo(),
+                dependencyThree: $0.dependencyThree()
             )
         }
     }
@@ -111,8 +111,6 @@ struct AppEnvironmentTests {
             DependencyTwoVariantOne()
         }
 
-        AppDependencies.shared.clear()
-
         var model = Model()
 
         #expect(model.dependencyOne is DependencyOneVariantOne)
@@ -127,8 +125,6 @@ struct AppEnvironmentTests {
         AppDependencies.shared.dependencyTwo.use { _ in
             DependencyTwoVariantTwo()
         }
-
-        AppDependencies.shared.clear()
 
         model = Model()
 
@@ -152,8 +148,6 @@ struct AppEnvironmentTests {
             DependencyTwoVariantOne()
         }
 
-        AppDependencies.shared.clear()
-
         var model = Model()
 
         #expect(model.dependencySix.dependencyOne is DependencyOneVariantOne)
@@ -169,8 +163,6 @@ struct AppEnvironmentTests {
         AppDependencies.shared.dependencyTwo.use { _ in
             DependencyTwoVariantTwo()
         }
-
-        AppDependencies.shared.clear()
 
         model = Model()
 
@@ -195,7 +187,6 @@ struct AppEnvironmentTests {
             DependencyTwoVariantOne()
         }
 
-        AppDependencies.shared.dependencyThree.reset()
         var model = Model()
 
         #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
@@ -210,7 +201,6 @@ struct AppEnvironmentTests {
                 DependencyTwoVariantTwo()
             }
 
-            AppDependencies.shared.dependencyThree.reset()
             return Model()
         }
 
@@ -379,8 +369,6 @@ struct AppEnvironmentTests {
                 DependencyTwoVariantOne()
             }
 
-            $0.clear()
-
             var model = Model()
 
             #expect(model.dependencySix.dependencyOne is DependencyOneVariantOne)
@@ -397,8 +385,6 @@ struct AppEnvironmentTests {
                 DependencyTwoVariantTwo()
             }
 
-            $0.clear()
-
             model = Model()
 
             #expect(model.dependencySix.dependencyOne is DependencyOneVariantTwo)
@@ -414,7 +400,7 @@ struct AppEnvironmentTests {
             @AppDependency(\.dependencyThree) var dependencyThree
         }
 
-        await AppDependencies.scoped {
+        try await AppDependencies.scoped {
             $0.dependencyOne.use { _ in
                 DependencyOneVariantOne()
             }
@@ -424,11 +410,12 @@ struct AppEnvironmentTests {
             }
 
             let work = {
-                AppDependencies.shared.dependencyThree.reset()
                 var model = Model()
 
                 #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
                 #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+                try await Task.sleep(for: .milliseconds(1))
 
                 AppDependencies.shared.dependencyOne.use { _ in
                     DependencyOneVariantTwo()
@@ -438,7 +425,6 @@ struct AppEnvironmentTests {
                     DependencyTwoVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyThree.reset()
                 model = Model()
 
                 #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
@@ -447,15 +433,13 @@ struct AppEnvironmentTests {
 
             async let child: Void = work()
 
-            AppDependencies.shared.dependencyThree.reset()
             var model = Model()
 
             #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
             #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
 
-            await child
+            try await child
 
-            AppDependencies.shared.dependencyThree.reset()
             model = Model()
 
             #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
@@ -478,7 +462,6 @@ struct AppEnvironmentTests {
             }
 
             let task = Task {
-                AppDependencies.shared.dependencyThree.reset()
                 var model = Model()
 
                 #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
@@ -492,14 +475,12 @@ struct AppEnvironmentTests {
                     DependencyTwoVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyThree.reset()
                 model = Model()
 
                 #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
                 #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
             }
 
-            AppDependencies.shared.dependencyThree.reset()
             var model = Model()
 
             #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
@@ -507,7 +488,6 @@ struct AppEnvironmentTests {
 
             await task.value
 
-            AppDependencies.shared.dependencyThree.reset()
             model = Model()
 
             #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
@@ -515,7 +495,6 @@ struct AppEnvironmentTests {
         }
     }
 
-    @MainActor
     @Test func test_detachedTaskDoNotInheritScope() async throws {
         struct Model {
             @AppDependency(\.dependencyThree) var dependencyThree
@@ -539,14 +518,12 @@ struct AppEnvironmentTests {
                     DependencyTwoVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyThree.reset()
                 let model = Model()
 
                 #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
                 #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
             }
 
-            AppDependencies.shared.dependencyThree.reset()
             var model = Model()
 
             #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
@@ -554,11 +531,183 @@ struct AppEnvironmentTests {
 
             await task.value
 
-            AppDependencies.shared.dependencyThree.reset()
             model = Model()
 
             #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
             #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+        }
+    }
+
+    @Test func test_multipleDetachedTaskDoNotInheritScope() async throws {
+        struct Model {
+            @AppDependency(\.dependencyThree) var dependencyThree
+            @AppDependency(\.dependencySix) var dependencySix
+        }
+
+        let tasks = [
+            Task {
+                struct DependencyThreeVariantOne: DependencyThreeProtocol {
+                    let dependencyOne: any DependencyOneProtocol
+                    let dependencyTwo: any DependencyTwoProtocol
+                }
+
+                AppDependencies.scoped {
+                    $0.dependencyOne.use { _ in
+                        DependencyOneVariantOne()
+                    }
+
+                    $0.dependencyTwo.use { _ in
+                        DependencyTwoVariantOne()
+                    }
+
+                    $0.dependencyThree.use {
+                        DependencyThreeVariantOne(
+                            dependencyOne: $0.dependencyOne(),
+                            dependencyTwo: $0.dependencyTwo()
+                        )
+                    }
+
+                    var model = Model()
+
+                    #expect(model.dependencyThree is DependencyThreeVariantOne)
+                    #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+                    #expect(model.dependencySix.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantOne)
+                    #expect(model.dependencySix.dependencyThree is DependencyThreeVariantOne)
+                    #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+                    $0.dependencyOne.use { _ in
+                        DependencyOneVariantTwo()
+                    }
+
+                    $0.dependencyTwo.use { _ in
+                        DependencyTwoVariantTwo()
+                    }
+
+                    model = Model()
+
+                    #expect(model.dependencyThree is DependencyThreeVariantOne)
+                    #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+                    #expect(model.dependencySix.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantTwo)
+                    #expect(model.dependencySix.dependencyThree is DependencyThreeVariantOne)
+                    #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+                }
+            },
+            Task {
+                struct DependencyThreeVariantTwo: DependencyThreeProtocol {
+                    let dependencyOne: any DependencyOneProtocol
+                    let dependencyTwo: any DependencyTwoProtocol
+                }
+
+                AppDependencies.scoped {
+                    $0.dependencyOne.use { _ in
+                        DependencyOneVariantOne()
+                    }
+
+                    $0.dependencyTwo.use { _ in
+                        DependencyTwoVariantOne()
+                    }
+
+                    $0.dependencyThree.use {
+                        DependencyThreeVariantTwo(
+                            dependencyOne: $0.dependencyOne(),
+                            dependencyTwo: $0.dependencyTwo()
+                        )
+                    }
+
+                    var model = Model()
+
+                    #expect(model.dependencyThree is DependencyThreeVariantTwo)
+                    #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+                    #expect(model.dependencySix.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantOne)
+                    #expect(model.dependencySix.dependencyThree is DependencyThreeVariantTwo)
+                    #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+                    $0.dependencyOne.use { _ in
+                        DependencyOneVariantTwo()
+                    }
+
+                    $0.dependencyTwo.use { _ in
+                        DependencyTwoVariantTwo()
+                    }
+
+                    model = Model()
+
+                    #expect(model.dependencyThree is DependencyThreeVariantTwo)
+                    #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+                    #expect(model.dependencySix.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantTwo)
+                    #expect(model.dependencySix.dependencyThree is DependencyThreeVariantTwo)
+                    #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+                }
+            },
+            Task {
+                struct DependencyThreeVariantThree: DependencyThreeProtocol {
+                    let dependencyOne: DependencyOneProtocol
+                    let dependencyTwo: DependencyTwoProtocol
+                }
+
+                AppDependencies.scoped {
+                    $0.dependencyOne.use { _ in
+                        DependencyOneVariantOne()
+                    }
+
+                    $0.dependencyTwo.use { _ in
+                        DependencyTwoVariantOne()
+                    }
+
+                    $0.dependencyThree.use {
+                        DependencyThreeVariantThree(
+                            dependencyOne: $0.dependencyOne(),
+                            dependencyTwo: $0.dependencyTwo()
+                        )
+                    }
+
+                    var model = Model()
+
+                    #expect(model.dependencyThree is DependencyThreeVariantThree)
+                    #expect(model.dependencyThree.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+                    #expect(model.dependencySix.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantOne)
+                    #expect(model.dependencySix.dependencyThree is DependencyThreeVariantThree)
+                    #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantOne)
+                    #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantOne)
+
+                    $0.dependencyOne.use { _ in
+                        DependencyOneVariantTwo()
+                    }
+
+                    $0.dependencyTwo.use { _ in
+                        DependencyTwoVariantTwo()
+                    }
+
+                    model = Model()
+
+                    #expect(model.dependencyThree is DependencyThreeVariantThree)
+                    #expect(model.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+                    #expect(model.dependencySix.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencySix.dependencyTwo is DependencyTwoVariantTwo)
+                    #expect(model.dependencySix.dependencyThree is DependencyThreeVariantThree)
+                    #expect(model.dependencySix.dependencyThree.dependencyOne is DependencyOneVariantTwo)
+                    #expect(model.dependencySix.dependencyThree.dependencyTwo is DependencyTwoVariantTwo)
+                }
+            }
+        ]
+
+        for task in tasks {
+            await task.value
         }
     }
 
