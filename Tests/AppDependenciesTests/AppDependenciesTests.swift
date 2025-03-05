@@ -2,50 +2,50 @@ import Testing
 
 @testable import AppDependencies
 
-fileprivate protocol DependencyOneProtocol {}
-fileprivate protocol DependencyTwoProtocol {}
-fileprivate protocol DependencyThreeProtocol {
+private protocol DependencyOneProtocol {}
+private protocol DependencyTwoProtocol {}
+private protocol DependencyThreeProtocol {
     var dependencyOne: any DependencyOneProtocol { get }
     var dependencyTwo: any DependencyTwoProtocol { get }
 }
-fileprivate protocol DependencyFourProtocol {
+private protocol DependencyFourProtocol {
     var dependencyFive: any DependencyFiveProtocol { get }
 }
-fileprivate protocol DependencyFiveProtocol {
+private protocol DependencyFiveProtocol {
     var dependencyFour: any DependencyFourProtocol { get }
 }
-fileprivate protocol DependencySixProtocol {
+private protocol DependencySixProtocol {
     var dependencyOne: any DependencyOneProtocol { get }
     var dependencyTwo: any DependencyTwoProtocol { get }
     var dependencyThree: any DependencyThreeProtocol { get }
 }
 
-fileprivate struct DependencyOneVariantOne: DependencyOneProtocol {}
-fileprivate struct DependencyOneVariantTwo: DependencyOneProtocol {}
+private struct DependencyOneVariantOne: DependencyOneProtocol {}
+private struct DependencyOneVariantTwo: DependencyOneProtocol {}
 
-fileprivate struct DependencyTwoVariantOne: DependencyTwoProtocol {}
-fileprivate struct DependencyTwoVariantTwo: DependencyTwoProtocol {}
+private struct DependencyTwoVariantOne: DependencyTwoProtocol {}
+private struct DependencyTwoVariantTwo: DependencyTwoProtocol {}
 
-fileprivate struct DependencyThree: DependencyThreeProtocol {
+private struct DependencyThree: DependencyThreeProtocol {
     let dependencyOne: any DependencyOneProtocol
     let dependencyTwo: any DependencyTwoProtocol
 }
 
-fileprivate struct DependencyFour: DependencyFourProtocol {
+private struct DependencyFour: DependencyFourProtocol {
     let dependencyFive: any DependencyFiveProtocol
 }
 
-fileprivate struct DependencyFive: DependencyFiveProtocol {
+private struct DependencyFive: DependencyFiveProtocol {
     let dependencyFour: any DependencyFourProtocol
 }
 
-fileprivate struct DependencySix: DependencySixProtocol {
+private struct DependencySix: DependencySixProtocol {
     let dependencyOne: any DependencyOneProtocol
     let dependencyTwo: any DependencyTwoProtocol
     let dependencyThree: any DependencyThreeProtocol
 }
 
-fileprivate extension AppDependencies {
+private extension AppDependencies {
     var dependencyOne: Registration<DependencyOneProtocol> {
         Registration(self) { _ in
             DependencyOneVariantOne()
@@ -94,7 +94,7 @@ fileprivate extension AppDependencies {
     }
 }
 
-struct AppEnvironmentValuesTests {
+struct AppDependenciesTests {
     @MainActor
     @Test func test_mainActorBoundRegisterAndResolveMultipleDependencies() async throws {
         AppDependencies.shared.dependencyOne.use { _ in
@@ -320,7 +320,6 @@ struct AppEnvironmentValuesTests {
             }
 
             let work = {
-                AppDependencies.shared.dependencyThree.reset()
                 var dependencyThree = AppDependencies.shared.dependencyThree()
 
                 #expect(dependencyThree.dependencyOne is DependencyOneVariantOne)
@@ -336,7 +335,6 @@ struct AppEnvironmentValuesTests {
                     DependencyTwoVariantTwo()
                 }
 
-                AppDependencies.shared.dependencyThree.reset()
                 dependencyThree = AppDependencies.shared.dependencyThree()
 
                 #expect(dependencyThree.dependencyOne is DependencyOneVariantTwo)
@@ -345,7 +343,6 @@ struct AppEnvironmentValuesTests {
 
             async let child: Void = work()
 
-            AppDependencies.shared.dependencyThree.reset()
             var dependencyThree = AppDependencies.shared.dependencyThree()
 
             #expect(dependencyThree.dependencyOne is DependencyOneVariantOne)
@@ -353,7 +350,6 @@ struct AppEnvironmentValuesTests {
 
             try await child
 
-            AppDependencies.shared.dependencyThree.reset()
             dependencyThree = AppDependencies.shared.dependencyThree()
 
             #expect(dependencyThree.dependencyOne is DependencyOneVariantTwo)

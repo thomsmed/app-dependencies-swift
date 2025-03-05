@@ -2,9 +2,9 @@ import Testing
 
 @testable import AppDependencies
 
-fileprivate class SomeDependencyBase {}
+private class SomeDependencyBase {}
 
-fileprivate extension AppDependencies {
+private extension AppDependencies {
     var uniqueRegisteredDependency: Registration<SomeDependencyBase> {
         Registration(self) { _ in
             SomeDependencyBase()
@@ -20,7 +20,7 @@ fileprivate extension AppDependencies {
     }
 }
 
-struct RegistrationTest {
+struct RegistrationTests {
     @Test func test_uniqueRegistration() async throws {
         final class UniqueRegisteredDependency: SomeDependencyBase {
             nonisolated(unsafe) static var count: Int = 0

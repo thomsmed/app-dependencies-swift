@@ -24,6 +24,8 @@ dependencies: [
 
 ## Declare
 
+By extending `AppDependencies`:
+
 ```swift
 extension AppDependencies {
     var dependencyOne: Registration<DependencyOneProtocol> {
@@ -51,11 +53,15 @@ extension AppDependencies {
 
 ## Resolve
 
+By accessing the shared `AppDependencies` instance explicitly:
+
 ```swift
 let dependencyOne = AppDependencies.shared.dependencyOne()
 let dependencyThree = AppDependencies.shared.dependencyThree()
 let dependencyTwo = AppDependencies.shared.dependencyTwo()
 ```
+
+Using a property wrapper (which implicitly access the shared `AppDependencies` instance):
 
 ```swift
 struct Model {
@@ -66,6 +72,8 @@ struct Model {
 ```
 
 ## Mock
+
+Using a scoped ([Task-Local stored](https://developer.apple.com/documentation/swift/tasklocal)) `AppDependencies` instance:
 
 ```swift
 AppDependencies.scoped {
@@ -87,6 +95,8 @@ AppDependencies.scoped {
     #expect(dependencyTwo is MockDependencyTwo)
 }
 ```
+
+Using a scoped ([Task-Local stored](https://developer.apple.com/documentation/swift/tasklocal)) `AppDependencies` instance (via property wrappers):
 
 ```swift
 struct Model {
@@ -112,6 +122,8 @@ AppDependencies.scoped {
     #expect(model.dependencyTwo is MockDependencyTwo)
 }
 ```
+
+Using a scoped ([Task-Local stored](https://developer.apple.com/documentation/swift/tasklocal)) `AppDependencies` instance during Unit/Model instantiation:
 
 ```swift
 struct Model {
