@@ -16,7 +16,10 @@ public final class AppDependencies: Sendable {
 
         internal func hash(into hasher: inout Hasher) {
             if key.hasPointerRepresentation {
-                hasher.combine(bytes: UnsafeRawBufferPointer(start: key.utf8Start, count: key.utf8CodeUnitCount))
+                hasher.combine(bytes: UnsafeRawBufferPointer(
+                    start: key.utf8Start,
+                    count: key.utf8CodeUnitCount
+                ))
             } else {
                 hasher.combine(key.unicodeScalar.value)
             }
@@ -115,7 +118,11 @@ public final class AppDependencies: Sendable {
         self.dependenciesGraph = dependenciesGraph
     }
 
-    internal func makeCopyOfState() -> (cache: [FactoryKey: Any], factories: [FactoryKey: any Factory], dependenciesGraph: [FactoryKey: Set<FactoryKey>]) {
+    internal func makeCopyOfState() -> (
+        cache: [FactoryKey: Any],
+        factories: [FactoryKey: any Factory],
+        dependenciesGraph: [FactoryKey: Set<FactoryKey>]
+    ) {
         lock.withLock {
             let cacheCopy = self.cache.merging([:], uniquingKeysWith: { current, _ in current })
             let factoriesCopy = self.factories.merging([:], uniquingKeysWith: { current, _ in current })
@@ -126,25 +133,25 @@ public final class AppDependencies: Sendable {
 
     internal func invalidateDependencies(on key: FactoryKey) {
         lock.withLock {
-            dependenciesGraph[key]?.forEach { dependentKey in
-                cache[dependentKey] = nil
-                invalidateDependencies(on: dependentKey)
+            self.dependenciesGraph[key]?.forEach { dependentKey in
+                self.cache[dependentKey] = nil
+                self.invalidateDependencies(on: dependentKey)
             }
         }
     }
 
     internal func clear(for key: FactoryKey) {
         lock.withLock {
-            cache[key] = nil
-            invalidateDependencies(on: key)
+            self.cache[key] = nil
+            self.invalidateDependencies(on: key)
         }
     }
 
     internal func reset(for key: FactoryKey) {
         lock.withLock {
-            cache[key] = nil
-            factories[key] = nil
-            invalidateDependencies(on: key)
+            self.cache[key] = nil
+            self.factories[key] = nil
+            self.invalidateDependencies(on: key)
         }
     }
 
@@ -153,9 +160,9 @@ public final class AppDependencies: Sendable {
         for key: FactoryKey
     ) {
         lock.withLock {
-            cache[key] = nil
-            factories[key] = TypedFactory(factory: factory)
-            invalidateDependencies(on: key)
+            self.cache[key] = nil
+            self.factories[key] = TypedFactory(factory: factory)
+            self.invalidateDependencies(on: key)
         }
     }
 
@@ -167,13 +174,13 @@ public final class AppDependencies: Sendable {
     ) -> T {
         lock.withLock {
             if self.resolving.contains(key) {
-                fatalError("Circular dependency detected for \(key)")
+                fatalError("Circular dependency detected for \(key.key)")
             }
 
             if let currentlyResolving = self.resolving.last {
-                var dependencies = self.dependenciesGraph[key] ?? []
-                dependencies.insert(currentlyResolving)
-                self.dependenciesGraph[key] = dependencies
+                var dependentKeys = self.dependenciesGraph[key] ?? []
+                dependentKeys.insert(currentlyResolving)
+                self.dependenciesGraph[key] = dependentKeys
             }
 
             self.resolving.append(key)
@@ -200,19 +207,21 @@ public final class AppDependencies: Sendable {
     }
 }
 
+// MARK: Public Interface
+
 public extension AppDependencies {
     func clear() {
         lock.withLock {
-            cache.removeAll(keepingCapacity: true)
-            dependenciesGraph.removeAll(keepingCapacity: true)
+            self.cache.removeAll(keepingCapacity: true)
+            self.dependenciesGraph.removeAll(keepingCapacity: true)
         }
     }
 
     func reset() {
         lock.withLock {
-            cache.removeAll(keepingCapacity: true)
-            factories.removeAll(keepingCapacity: true)
-            dependenciesGraph.removeAll(keepingCapacity: true)
+            self.cache.removeAll(keepingCapacity: true)
+            self.factories.removeAll(keepingCapacity: true)
+            self.dependenciesGraph.removeAll(keepingCapacity: true)
         }
     }
 
@@ -224,7 +233,7 @@ public extension AppDependencies {
             dependenciesGraph: copy.dependenciesGraph
         )
         return try $local.withValue(appDependencies) {
-            try operation(AppDependencies.shared)
+            try operation(.shared)
         }
     }
 
@@ -236,7 +245,7 @@ public extension AppDependencies {
             dependenciesGraph: copy.dependenciesGraph
         )
         return try await $local.withValue(appDependencies) {
-            try await operation(AppDependencies.shared)
+            try await operation(.shared)
         }
     }
 }
