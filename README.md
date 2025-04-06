@@ -71,6 +71,8 @@ struct Model {
 }
 ```
 
+Check out [AppDependency](Sources/AppDependencies/AppDependency) for the various property wrapper alternatives.
+
 ## Mock
 
 Using a scoped ([Task-Local stored](https://developer.apple.com/documentation/swift/tasklocal)) `AppDependencies` instance:
