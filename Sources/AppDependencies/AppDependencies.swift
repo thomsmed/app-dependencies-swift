@@ -44,36 +44,36 @@ public final class AppDependencies: Sendable {
             case singleton
         }
 
-        private let appEnvironment: AppDependencies
+        private let appDependencies: AppDependencies
         private let key: FactoryKey
         private let factory: @Sendable (AppDependencies) -> T
 
         private var lifetime: Lifetime = .singleton
 
         public init(
-            _ appEnvironment: AppDependencies,
+            _ appDependencies: AppDependencies,
             key: StaticString = #function,
             _ factory: @escaping @Sendable (AppDependencies) -> T
         ) {
-            self.appEnvironment = appEnvironment
+            self.appDependencies = appDependencies
             self.key = FactoryKey(from: key)
             self.factory = factory
         }
 
         public func callAsFunction() -> T {
-            appEnvironment.resolve(T.self, for: key, with: factory, and: lifetime)
+            appDependencies.resolve(T.self, for: key, with: factory, and: lifetime)
         }
 
         public func use(_ factory: @escaping @Sendable (AppDependencies) -> T) {
-            appEnvironment.use(factory, for: key)
+            appDependencies.use(factory, for: key)
         }
 
         public func clear() {
-            appEnvironment.clear(for: key)
+            appDependencies.clear(for: key)
         }
 
         public func reset() {
-            appEnvironment.reset(for: key)
+            appDependencies.reset(for: key)
         }
 
         public var unique: Self {
